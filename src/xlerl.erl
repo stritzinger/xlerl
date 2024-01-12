@@ -1,18 +1,22 @@
 -module(xlerl).
+% @doc API to parse, edit and write xlsx files with xmerl and zip
 
+% API
 -export([parse/1]).
 -export([add_shared_string/2]).
 -export([edit/5]).
 -export([render/2]).
 
+% Includes
 -include_lib("xmerl/include/xmerl.hrl").
+
+%--- Macros --------------------------------------------------------------------
 
 -define(worksheet_type, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet").
 
-%- API
-% Main objective is to load all XML content in simple_forms
+%--- API -----------------------------------------------------------------------
 
-% Gets a file binary
+% @doc Gets a file binary
 % Unpacks its zip and returns a map with the parsed content of each file.
 % Binary files are left untouched.
 % #{InternalFilename => ParsedContent}
