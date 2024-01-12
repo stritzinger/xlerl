@@ -2,7 +2,7 @@
 
 -export([parse/1]).
 -export([add_shared_string/2]).
--export([edit_cell/6]).
+-export([edit/5]).
 -export([render/2]).
 
 -include_lib("xmerl/include/xmerl.hrl").
@@ -40,22 +40,75 @@ add_shared_string(String, Xlsx) ->
     NewSharedStrings = SharedStrings#xmlElement{
         attributes = NewAttributes,
         content = NewStrings},
-    {Pos, Xlsx#{SharedStringsFile => NewSharedStrings}}.
+    {UniqueCount, Xlsx#{SharedStringsFile => NewSharedStrings}}.
 
-edit_cell(SheetName, Column, Row, DataType, Value, Xlsx) ->
-    % first we find the file...
+edit(SheetName, Column, Row, Value, Xlsx) ->
     SheetFile = lookup_sheet_file(SheetName, Xlsx),
-    % io:format("Sheet file =  ~p\n", [SheetFile]),
     #{SheetFile := SheetXml} = Xlsx,
-    % SheetXml2 = edit_sheet_cell(Column, Row, DataType, Value, SheetXml),
-    % Xlsx#{SheetFile := SheetXml2}.
-    Xlsx.
+    SheetXml2 = edit_worksheet(Column, Row, Value, SheetXml),
+    Xlsx#{SheetFile := SheetXml2}.
 
 render(Filename, Xlsx) ->
     ZipBinaries = #{K => export_xml(V) || K := V <- Xlsx},
     zip:create(Filename, maps:to_list(ZipBinaries), [memory]).
 
 %- Internal --------------------------------------------------------------------
+
+edit_worksheet(Column, Row, Value,
+                    #xmlElement{name = worksheet, content = Content} = WS) ->
+    Fun = fun
+        (#xmlElement{name = 'sheetData'} = D) ->
+            edit_worksheet_data(Column, Row, Value, D);
+        (E) -> E
+    end,
+    WS#xmlElement{content = lists:map(Fun, Content)}.
+
+edit_worksheet_data(Column, RowNumber, Value,
+                    #xmlElement{name = sheetData, content = Rows} = SD) ->
+    Fun = fun(Row) ->
+        case xml_elem_has_attr('r', RowNumber, Row) of
+            true -> edit_column_in_row(Column ++ RowNumber, Value, Row);
+            false -> Row
+        end
+    end,
+    SD#xmlElement{content = lists:map(Fun, Rows)}.
+
+edit_column_in_row(ColumID, Value,
+                   #xmlElement{name = row, content = Columns} = Row) ->
+    Fun = fun(Column) ->
+        case xml_elem_has_attr('r', ColumID, Column) of
+            true -> write_value_in_cell(Value, Column);
+            false -> Column
+        end
+    end,
+    Row#xmlElement{content = lists:map(Fun, Columns)}.
+
+write_value_in_cell(Value, #xmlElement{content = Content} = Cell) ->
+    OtherContent = [A || #xmlElement{name = N} = A <- Content, N /= v],
+    XmlValue = #xmlElement{
+        name = v,
+        content = [
+            #xmlText{type = text, pos = 1, value = value_to_string(Value)}
+    ]},
+    Cell1 = set_cell_type(Value, Cell),
+    Cell1#xmlElement{content = OtherContent ++ [XmlValue]}.
+
+set_cell_type(Value, #xmlElement{attributes = Attrs} = Cell)
+when is_binary(Value) or is_list(Value) ->
+    OtherAttr = [A || #xmlAttribute{name = N} = A <- Attrs, N /= t],
+     Cell#xmlElement{
+            attributes = [
+                #xmlAttribute{name = t, value = "str"} | OtherAttr]
+    };
+set_cell_type(_, Cell) -> % type is not set if the value is a number
+    Cell.
+
+value_to_string(V) when is_list(V) ; is_binary(V) ->
+    V;
+value_to_string(V) when is_integer(V) ->
+    integer_to_list(V);
+value_to_string(V) when is_float(V) ->
+    float_to_list(V).
 
 lookup_sheet_file(SheetName, Xlsx) ->
     #{"xl/workbook.xml" := WorkbookXml} = Xlsx, % TODO lookup workbook file
@@ -94,17 +147,8 @@ match_attr(_, _, _) -> false.
 
 export_xml(Bin) when is_binary(Bin) -> Bin;
 export_xml(#xmlElement{} = E) ->
-    % FL = lists:flatten(xmerl:export_simple([E], xmerl_xml)),
     unicode:characters_to_binary(xmerl:export_simple([E], xmerl_xml)).
-    % % CursedChars = [I || I <- XML, (I < 0) or (I > 255)],
-    % % io:format("Chars= ~p\n", [CursedChars]),
-    % case file:write_file(N, XML) of
-    %     ok -> ok;
-    %     Error -> io:format("Error ~p, writing ~p\n",[Error, N])
-    % end,
 
-% xml_parse("xl/styles.xml", _GetInfo, GetBin, Store) ->
-%     Store#{"xl/styles.xml" => GetBin()}; % file is problematic
 xml_parse(Filename, _GetInfo, GetBin, Store) ->
     Content = case filename:extension(Filename) of
         Xml when Xml == ".xml" ; Xml == ".rels" ->
