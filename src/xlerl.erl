@@ -1,5 +1,5 @@
--module(xlerl).
 % @doc API to parse, edit and write xlsx files with xmerl and zip
+-module(xlerl).
 
 % API
 -export([parse/1]).
@@ -23,6 +23,11 @@
 parse({_Filename, _Binary} = XlsxFile) ->
     zip:foldl(fun xml_parse/4, #{}, XlsxFile).
 
+% @doc Adds a string to the xl/sharedStrings.xml file
+% The new string is inserted at the end of the list and the list length is returned.
+% This should allow the user to just insert the string ID in other cells.
+% Currently, this method is not working properly but may be fixed in future.
+% It could also be embedded in the edit call as an optimization.
 add_shared_string(String, Xlsx) ->
     SharedStringsFile = "xl/sharedStrings.xml",
     #{SharedStringsFile := SharedStrings} = Xlsx,
@@ -46,12 +51,16 @@ add_shared_string(String, Xlsx) ->
         content = NewStrings},
     {UniqueCount, Xlsx#{SharedStringsFile => NewSharedStrings}}.
 
+% @doc Directly inserts values in precise locations on a selected sheet
+% For now it expects sheets with unique names,
+% which might not always be the case.
 edit(SheetName, Column, Row, Value, Xlsx) ->
     SheetFile = lookup_sheet_file(SheetName, Xlsx),
     #{SheetFile := SheetXml} = Xlsx,
     SheetXml2 = edit_worksheet(Column, Row, Value, SheetXml),
     Xlsx#{SheetFile := SheetXml2}.
 
+% @doc Re-assembles the XLSX zip archive exporting all XML elements in binaries.
 render(Filename, Xlsx) ->
     ZipBinaries = #{K => export_xml(V) || K := V <- Xlsx},
     zip:create(Filename, maps:to_list(ZipBinaries), [memory]).
