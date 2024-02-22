@@ -5,6 +5,7 @@
 -export([parse/1]).
 -export([add_shared_string/2]).
 -export([write/5]).
+-export([read/4]).
 -export([render/2]).
 
 % Includes
@@ -51,13 +52,22 @@ add_shared_string(String, Xlsx) ->
         content = NewStrings},
     {UniqueCount, Xlsx#{SharedStringsFile => NewSharedStrings}}.
 
+% @doc Extract a single value in a precise locations on a selected sheet
+% Returns 'empty' if cell is empty
+read(SheetName, Column, Row, Xlsx) ->
+    SheetFile = lookup_sheet_file(SheetName, Xlsx),
+    #{SheetFile := SheetXml} = Xlsx,
+    ColumnName = Column ++ Row, % e.g. "B1" = "B" ++ "1"
+    read_worksheet(Row, ColumnName, SheetXml).
+
 % @doc Directly inserts values in precise locations on a selected sheet
 % For now it expects sheets with unique names,
 % which might not always be the case.
 write(SheetName, Column, Row, Value, Xlsx) ->
     SheetFile = lookup_sheet_file(SheetName, Xlsx),
     #{SheetFile := SheetXml} = Xlsx,
-    SheetXml2 = write_worksheet(Column, Row, Value, SheetXml),
+    ColumnName = Column ++ Row, % e.g. "B1" = "B" ++ "1"
+    SheetXml2 = write_worksheet(Row, ColumnName, Value, SheetXml),
     Xlsx#{SheetFile := SheetXml2}.
 
 % @doc Re-assembles the XLSX zip archive exporting all XML elements in binaries.
@@ -67,20 +77,57 @@ render(Filename, Xlsx) ->
 
 %- Internal --------------------------------------------------------------------
 
-write_worksheet(Column, Row, Value,
+read_worksheet(Row, Column, #xmlElement{name = worksheet, content = Content}) ->
+    case get_xml_elem_by_name(sheetData, Content) of
+        undefined -> {error, no_sheetdata};
+        SheetData -> read_row_in_worksheet(Row, Column, SheetData)
+    end.
+
+read_row_in_worksheet(Row, Column, #xmlElement{content = Rows}) ->
+    case get_xml_elem_by_attr(r, Row, Rows) of
+        undefined -> {error, {row_not_found, Row}};
+        RowElement  -> read_column_in_row(Column, RowElement)
+    end.
+
+read_column_in_row(Column, #xmlElement{content = Columns}) ->
+    case get_xml_elem_by_attr(r, Column, Columns) of
+        undefined -> {error, {column_not_found, Column}};
+        CellElement  -> read_value_in_cell(CellElement)
+    end.
+
+read_value_in_cell(#xmlElement{content = CellContent}) ->
+    case get_xml_elem_by_name(v, CellContent) of
+        undefined -> empty;
+        #xmlElement{name = v,
+                    content = [#xmlText{type = text, value = V}]} -> V
+    end.
+
+get_xml_elem_by_name(Name, Content) ->
+    case [E || #xmlElement{name = N} = E <- Content, N == Name] of
+        [] -> undefined;
+        [E|_]  -> E
+    end.
+
+get_xml_elem_by_attr(AttrName, AttrValue, Content) ->
+    case [E || E <- Content, xml_elem_has_attr(AttrName, AttrValue, E)] of
+        [] -> undefined;
+        [E|_]  -> E
+    end.
+
+write_worksheet(Row, Column, Value,
                     #xmlElement{name = worksheet, content = Content} = WS) ->
     Fun = fun
         (#xmlElement{name = 'sheetData'} = D) ->
-            write_worksheet_data(Column, Row, Value, D);
+            write_worksheet_data(Row, Column, Value, D);
         (E) -> E
     end,
     WS#xmlElement{content = lists:map(Fun, Content)}.
 
-write_worksheet_data(Column, RowNumber, Value,
+write_worksheet_data(RowNumber, Column, Value,
                     #xmlElement{name = sheetData, content = Rows} = SD) ->
     Fun = fun(Row) ->
         case xml_elem_has_attr('r', RowNumber, Row) of
-            true -> write_column_in_row(Column ++ RowNumber, Value, Row);
+            true -> write_column_in_row(Column, Value, Row);
             false -> Row
         end
     end,
