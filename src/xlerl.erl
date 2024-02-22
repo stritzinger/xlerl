@@ -4,7 +4,7 @@
 % API
 -export([parse/1]).
 -export([add_shared_string/2]).
--export([edit/5]).
+-export([write/5]).
 -export([render/2]).
 
 % Includes
@@ -27,7 +27,7 @@ parse({_Filename, _Binary} = XlsxFile) ->
 % The new string is inserted at the end of the list and the list length is returned.
 % This should allow the user to just insert the string ID in other cells.
 % Currently, this method is not working properly but may be fixed in future.
-% It could also be embedded in the edit call as an optimization.
+% It could also be embedded in the write call as an optimization.
 add_shared_string(String, Xlsx) ->
     SharedStringsFile = "xl/sharedStrings.xml",
     #{SharedStringsFile := SharedStrings} = Xlsx,
@@ -54,10 +54,10 @@ add_shared_string(String, Xlsx) ->
 % @doc Directly inserts values in precise locations on a selected sheet
 % For now it expects sheets with unique names,
 % which might not always be the case.
-edit(SheetName, Column, Row, Value, Xlsx) ->
+write(SheetName, Column, Row, Value, Xlsx) ->
     SheetFile = lookup_sheet_file(SheetName, Xlsx),
     #{SheetFile := SheetXml} = Xlsx,
-    SheetXml2 = edit_worksheet(Column, Row, Value, SheetXml),
+    SheetXml2 = write_worksheet(Column, Row, Value, SheetXml),
     Xlsx#{SheetFile := SheetXml2}.
 
 % @doc Re-assembles the XLSX zip archive exporting all XML elements in binaries.
@@ -67,26 +67,26 @@ render(Filename, Xlsx) ->
 
 %- Internal --------------------------------------------------------------------
 
-edit_worksheet(Column, Row, Value,
+write_worksheet(Column, Row, Value,
                     #xmlElement{name = worksheet, content = Content} = WS) ->
     Fun = fun
         (#xmlElement{name = 'sheetData'} = D) ->
-            edit_worksheet_data(Column, Row, Value, D);
+            write_worksheet_data(Column, Row, Value, D);
         (E) -> E
     end,
     WS#xmlElement{content = lists:map(Fun, Content)}.
 
-edit_worksheet_data(Column, RowNumber, Value,
+write_worksheet_data(Column, RowNumber, Value,
                     #xmlElement{name = sheetData, content = Rows} = SD) ->
     Fun = fun(Row) ->
         case xml_elem_has_attr('r', RowNumber, Row) of
-            true -> edit_column_in_row(Column ++ RowNumber, Value, Row);
+            true -> write_column_in_row(Column ++ RowNumber, Value, Row);
             false -> Row
         end
     end,
     SD#xmlElement{content = lists:map(Fun, Rows)}.
 
-edit_column_in_row(ColumID, Value,
+write_column_in_row(ColumID, Value,
                    #xmlElement{name = row, content = Columns} = Row) ->
     Fun = fun(Column) ->
         case xml_elem_has_attr('r', ColumID, Column) of
