@@ -21,6 +21,8 @@
 % Unpacks its zip and returns a map with the parsed content of each file.
 % Binary files are left untouched.
 % #{InternalFilename => ParsedContent}
+-spec parse({Filename :: file:name(), Binary :: binary()}) ->
+    {ok, Xlsx :: map()} | {error, Reason :: term()}.
 parse({_Filename, _Binary} = XlsxFile) ->
     zip:foldl(fun xml_parse/4, #{}, XlsxFile).
 
@@ -29,6 +31,8 @@ parse({_Filename, _Binary} = XlsxFile) ->
 % This should allow the user to just insert the string ID in other cells.
 % Currently, this method is not working properly but may be fixed in future.
 % It could also be embedded in the write call as an optimization.
+-spec add_shared_string(String :: binary(), Xlsx :: map()) ->
+    {StringIndex :: string(), NewXlsx :: map()}.
 add_shared_string(String, Xlsx) ->
     SharedStringsFile = "xl/sharedStrings.xml",
     #{SharedStringsFile := SharedStrings} = Xlsx,
@@ -54,6 +58,9 @@ add_shared_string(String, Xlsx) ->
 
 % @doc Extract a single value in a precise locations on a selected sheet
 % Returns 'empty' if cell is empty
+-spec read(SheetName :: string(), Column :: string(),
+           Row :: string(),Xlsx :: map()) ->
+    Value :: string().
 read(SheetName, Column, Row, Xlsx) ->
     SheetFile = lookup_sheet_file(SheetName, Xlsx),
     #{SheetFile := SheetXml} = Xlsx,
@@ -63,6 +70,9 @@ read(SheetName, Column, Row, Xlsx) ->
 % @doc Directly inserts values in precise locations on a selected sheet
 % For now it expects sheets with unique names,
 % which might not always be the case.
+-spec write(SheetName :: string(), Column :: string(),
+            Row :: string(), Value :: term(), Xlsx :: map()) ->
+    NewXlsx :: map().
 write(SheetName, Column, Row, Value, Xlsx) ->
     SheetFile = lookup_sheet_file(SheetName, Xlsx),
     #{SheetFile := SheetXml} = Xlsx,
@@ -71,6 +81,9 @@ write(SheetName, Column, Row, Value, Xlsx) ->
     Xlsx#{SheetFile := SheetXml2}.
 
 % @doc Re-assembles the XLSX zip archive exporting all XML elements in binaries.
+-spec render(Filename :: file:name(), Xlsx :: map()) ->
+    {ok, {FileName :: file:name(), binary()}}
+    | {error, Reason :: term()}.
 render(Filename, Xlsx) ->
     ZipBinaries = #{K => export_xml(V) || K := V <- Xlsx},
     zip:create(Filename, maps:to_list(ZipBinaries), [memory]).
