@@ -1,14 +1,12 @@
 {application, xlerl,
- [{description, "An OTP application"},
+ [{description, "Standalone minimal XLSX editing library in erlang."},
   {vsn, "0.1.0"},
-  {registered, []},
   {applications,
    [kernel,
     stdlib
    ]},
-  {env,[]},
-  {modules, []},
-
   {licenses, ["Apache-2.0"]},
-  {links, []}
+  {links, [
+    {"GitHub", "https://github.com/stritzinger/xlerl"}]
+  }
  ]}.
