@@ -3,10 +3,15 @@
 
 % API
 -export([parse/1]).
+-ignore_xref({parse, 1}).
 -export([add_shared_string/2]).
+-ignore_xref({add_shared_string, 2}).
 -export([write/5]).
+-ignore_xref({write, 5}).
 -export([read/4]).
+-ignore_xref({read, 4}).
 -export([render/2]).
+-ignore_xref({render, 2}).
 
 % Includes
 -include_lib("xmerl/include/xmerl.hrl").
@@ -17,16 +22,18 @@
 
 %--- API -----------------------------------------------------------------------
 
-% @doc Gets a file binary
-% Unpacks its zip and returns a map with the parsed content of each file.
-% Binary files are left untouched.
-% #{InternalFilename => ParsedContent}
+% @doc Parses a file binary expecting an xlsx zip file
+%
+% Unpacks the zip and returns a map with the parsed content of each file.
+% Internal binary files are left untouched.
+% #{InternalFilenamePath => XmerlParsedContent}
 -spec parse({Filename :: file:name(), Binary :: binary()}) ->
     {ok, Xlsx :: map()} | {error, Reason :: term()}.
 parse({_Filename, _Binary} = XlsxFile) ->
     zip:foldl(fun xml_parse/4, #{}, XlsxFile).
 
-% @doc Adds a string to the xl/sharedStrings.xml file
+% @deprecated Adds a string to the xl/sharedStrings.xml file
+%
 % The new string is inserted at the end of the list and the list length is returned.
 % This should allow the user to just insert the string ID in other cells.
 % Currently, this method is not working properly but may be fixed in future.
@@ -57,7 +64,8 @@ add_shared_string(String, Xlsx) ->
     {UniqueCount, Xlsx#{SharedStringsFile => NewSharedStrings}}.
 
 % @doc Extract a single value in a precise locations on a selected sheet
-% Returns 'empty' if cell is empty
+%
+% Returns 'empty' if the cell is empty.
 -spec read(SheetName :: string(), Column :: string(),
            Row :: string(),Xlsx :: map()) ->
     Value :: string().
@@ -68,6 +76,7 @@ read(SheetName, Column, Row, Xlsx) ->
     read_worksheet(Row, ColumnName, SheetXml).
 
 % @doc Directly inserts values in precise locations on a selected sheet
+%
 % For now it expects sheets with unique names,
 % which might not always be the case.
 -spec write(SheetName :: string(), Column :: string(),
