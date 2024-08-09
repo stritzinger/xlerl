@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.0]
+
 Initial release
 
 Available features:
@@ -18,3 +20,4 @@ Available features:
 - Exporting
 
 [Unreleased]: https://github.com/stritzinger/xlerl/compare/ec3038933b203555d30ac4a0d948f2b862718433...HEAD
+[0.1.0]: https://github.com/stritzinger/xlerl/compare/ec3038933b203555d30ac4a0d948f2b862718433...0.1.0
