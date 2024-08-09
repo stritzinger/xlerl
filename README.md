@@ -7,8 +7,8 @@
   <a href="https://hex.pm/packages/xlerl">
     <img alt="hex.pm version" src="https://img.shields.io/hexpm/v/xlerl?style=flat-square"/>
   </a>
-  <a href="LICENSE.md">
-    <img alt="hex.pm license" src="https://img.shields.io/hexpm/l/xlerl?style=flat-square"/>
+  <a href="LICENSE">
+    <img alt="hex.pm license" src="https://img.shields.io/github/license/stritzinger/xlerl?style=flat-square"/>
   </a>
   <a href="https://github.com/stritzinger/xlerl/blob/main/.github/workflows/ci.yml#L18">
     <img alt="erlang versions" src="https://img.shields.io/badge/erlang-26+-blue.svg?style=flat-square"/>
