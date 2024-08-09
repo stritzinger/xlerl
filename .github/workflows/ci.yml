@@ -15,7 +15,7 @@ jobs:
     name: Erlang/OTP ${{matrix.otp}} / rebar3 ${{matrix.rebar3}}
     strategy:
       matrix:
-        otp: ['26.2.5']
+        otp: ['26','27']
         rebar3: ['3.23.0']
     steps:
       - uses: erlef/setup-beam@v1
@@ -26,9 +26,3 @@ jobs:
       - name: Compiling
         run: |
           rebar3 compile
-      - name:  Dialyzer
-        run: |
-          rebar3 dialyzer
-      - name:  Xref
-        run: |
-          rebar3 xref

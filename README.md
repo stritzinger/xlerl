@@ -1,5 +1,20 @@
 # Xlerl
 
+<p >
+  <a href="https://github.com/stritzinger/xlerl/actions/workflows/ci.yml?query=branch%3Amain">
+    <img alt="continous integration" src="https://img.shields.io/github/actions/workflow/status/stritzinger/xlerl/ci.yml?label=build&style=flat-square&branch=main"/>
+  </a>
+  <a href="https://hex.pm/packages/xlerl">
+    <img alt="hex.pm version" src="https://img.shields.io/hexpm/v/xlerl?style=flat-square"/>
+  </a>
+  <a href="LICENSE.md">
+    <img alt="hex.pm license" src="https://img.shields.io/hexpm/l/xlerl?style=flat-square"/>
+  </a>
+  <a href="https://github.com/stritzinger/xlerl/blob/main/.github/workflows/ci.yml#L18">
+    <img alt="erlang versions" src="https://img.shields.io/badge/erlang-26+-blue.svg?style=flat-square"/>
+  </a>
+</p>
+
 Standalone minimal XLSX editing library in erlang.
 
 Xlerl allows to quickly edit any XLSX file. Data is unpacked with zip and internal XML files are parsed and written with xmerl.
