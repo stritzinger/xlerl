@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- New `get_shared_string` function to resolve indexes of shared strings.
+
 ## [0.1.1]
 
 ### Fixed
