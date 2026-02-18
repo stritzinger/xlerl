@@ -1,6 +1,6 @@
 {application, xlerl,
  [{description, "Standalone minimal XLSX editing library in erlang."},
-  {vsn, "0.1.0"},
+  {vsn, semver},
   {applications,
    [kernel,
     stdlib
