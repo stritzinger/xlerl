@@ -11,7 +11,7 @@
     <img alt="hex.pm license" src="https://img.shields.io/github/license/stritzinger/xlerl?style=flat-square"/>
   </a>
   <a href="https://github.com/stritzinger/xlerl/blob/main/.github/workflows/ci.yml#L18">
-    <img alt="erlang versions" src="https://img.shields.io/badge/erlang-26+-blue.svg?style=flat-square"/>
+    <img alt="erlang versions" src="https://img.shields.io/badge/erlang-27+-blue.svg?style=flat-square"/>
   </a>
 </p>
 
