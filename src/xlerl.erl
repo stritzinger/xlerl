@@ -182,8 +182,10 @@ when is_binary(Value) or is_list(Value) ->
             attributes = [
                 #xmlAttribute{name = t, value = "str"} | OtherAttr]
     };
-set_cell_type(_, Cell) -> % type is not set if the value is a number
-    Cell.
+set_cell_type(_, #xmlElement{attributes = Attrs} = Cell) ->
+    % Numeric cells must not keep string/shared-string type.
+    OtherAttr = [A || #xmlAttribute{name = N} = A <- Attrs, N /= t],
+    Cell#xmlElement{attributes = OtherAttr}.
 
 value_to_string(V) when is_list(V) ; is_binary(V) ->
     V;
