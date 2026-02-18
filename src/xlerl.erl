@@ -10,6 +10,8 @@
 -ignore_xref({write, 5}).
 -export([read/4]).
 -ignore_xref({read, 4}).
+-export([get_shared_string/2]).
+-ignore_xref({get_shared_string, 2}).
 -export([render/2]).
 -ignore_xref({render, 2}).
 
@@ -75,6 +77,29 @@ read(SheetName, Column, Row, Xlsx) ->
     ColumnName = Column ++ Row, % e.g. "B1" = "B" ++ "1"
     read_worksheet(Row, ColumnName, SheetXml).
 
+% @doc Resolves a shared-string index to its text value.
+%
+% Returns {error, no_shared_strings} if the workbook has no shared strings file.
+% Returns {error, invalid_shared_string_index} for invalid indices.
+% Returns {error, shared_string_out_of_range} if index does not exist.
+-spec get_shared_string(Index :: integer() | string() | binary(), Xlsx :: map()) ->
+    {ok, string()} | {error, atom()}.
+get_shared_string(Index, Xlsx) ->
+    maybe
+        {ok, I} ?= normalized_string_index(Index),
+        {ok, SST} ?= get_shared_strings(Xlsx),
+        #xmlElement{name = sst, content = Content} = SST,
+        Strings = [E || #xmlElement{name = si} = E <- Content],
+        case length(Strings) > I of
+            true ->
+                % Shared string indices are zero-based in XLSX cells.
+                StringElement = lists:nth(I + 1, Strings),
+                {ok, extract_shared_string(StringElement)};
+            false ->
+                {error, shared_string_out_of_range}
+        end
+    end.
+
 % @doc Directly inserts values in precise locations on a selected sheet
 %
 % For now it expects sheets with unique names,
@@ -129,6 +154,35 @@ get_xml_elem_by_name(Name, Content) ->
         [] -> undefined;
         [E|_]  -> E
     end.
+
+normalized_string_index(Index) when is_integer(Index), Index >= 0 ->
+    Index;
+normalized_string_index(Index) when is_binary(Index) ->
+    normalized_string_index(binary_to_list(Index));
+normalized_string_index(Index) when is_list(Index) ->
+    try
+        Trimmed = string:trim(Index),
+        {ok, list_to_integer(Trimmed)}
+    catch
+        error:badarg -> {error, invalid_shared_string_index}
+    end;
+normalized_string_index(_) ->
+    {error, invalid_shared_string_index}.
+
+extract_shared_string(#xmlElement{content = Content}) ->
+    lists:flatten(extract_text_nodes(Content)).
+
+extract_text_nodes(Content) ->
+    lists:flatten([extract_text_node(Node) || Node <- Content]).
+
+extract_text_node(#xmlText{type = text, value = Value}) ->
+    Value;
+extract_text_node(#xmlElement{name = t, content = Content}) ->
+    extract_text_nodes(Content);
+extract_text_node(#xmlElement{content = Content}) ->
+    extract_text_nodes(Content);
+extract_text_node(_) ->
+    [].
 
 get_xml_elem_by_attr(AttrName, AttrValue, Content) ->
     case [E || E <- Content, xml_elem_has_attr(AttrName, AttrValue, E)] of
@@ -266,3 +320,11 @@ unique_string_element(String, Pos) ->
             }
         ]
     }.
+
+get_shared_strings(Xlsx) ->
+    case maps:get("xl/sharedStrings.xml", Xlsx, undefined) of
+        undefined ->
+            {error, no_shared_strings};
+        SST ->
+            {ok, SST}
+    end.
